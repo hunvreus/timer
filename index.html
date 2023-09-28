@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Timer</title>
+    <!-- <link rel="stylesheet" href="style.css"> -->
+    
+    <script>
+        let sound = new Audio('./bell.mp3');
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('timer', () => ({
+                config: {
+                    warmUp: 5,
+                    coolDown: 5,
+                    highIntensity: 20,
+                    lowIntensity: 10,
+                    sets: 8
+                },
+                intervals: [],
+                position: 0,
+                time: 0,
+                play: false,
+                type: '',
+                text: '',
+
+                initialize() {
+                    this.intervals = [];
+                    if (this.config.coolDown) this.intervals.unshift({ time: this.config.coolDown, type: 'cool-down', text: 'Cool down'});
+                    for (let i = 0; i < this.config.sets; i++) {
+                        if (this.config.lowIntensity) this.intervals.unshift({ time: this.config.lowIntensity, type: 'low-intensity', text: 'Work' + ' (' + (this.config.sets - i) + '/' + this.config.sets + ')'});
+                        if (this.config.highIntensity) this.intervals.unshift({ time: this.config.highIntensity, type: 'high-intensity', text: 'Work' + ' (' + (this.config.sets - i) + '/' + this.config.sets + ')'});
+                    }
+                    if (this.config.warmUp) this.intervals.unshift({ time: this.config.warmUp, type: 'warm-up', text: 'Warm up'});
+                    if (this.intervals.length) {
+                        this.set(0);
+                    }
+                },
+                set(position) {
+                    this.time = this.intervals[position].time;
+                    this.type = this.intervals[position].type;
+                    this.text = this.intervals[position].text;
+                },
+                next() {
+                    console.log('Next');
+                    if (this.position < (this.intervals.length - 1)) {
+                        this.position++;
+                        this.set(this.position);
+                    }
+                },
+                previous() {
+                    console.log('Previous');
+                    if (this.position > 0) {
+                        this.position--;
+                        this.set(this.position);
+                    }
+                },
+                countdown() {
+                    if (this.play) {
+                        // TODO: maybe move to a reset function? Should we stay there?
+                        if ((this.time == 0) && (this.position == this.intervals.length - 1)) {
+                            // TODO: trigger message to inform we're done?
+                            this.play = false;
+                            this.position = 0;
+                            this.time = this.intervals[0].time;
+                            this.type = this.intervals[0].type;
+                        }
+                        else {
+                            this.time--;
+                            if (this.time == 0) {
+                                sound.play();
+                                this.next();
+                            }
+                        }
+                    }
+                }
+            }))
+        })
+    </script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@100;200;300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Manrope"']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        body {
+            @apply bg-neutral-900 text-white text-center;
+        }
+
+        .warm-up {
+            @apply bg-amber-500;
+        }
+
+        .high-intensity {
+            @apply bg-red-500;
+        }
+
+        .low-intensity {
+            @apply bg-lime-500;
+        }
+
+        .cool-down {
+            @apply bg-blue-500;
+        }
+
+        .timer {
+            background: linear-gradient(#171717, #171717 50%, transparent 50%, transparent);
+            background-size: 100% 200%;
+            background-position: 100% 100%;
+            transition: background linear 1s;
+        }
+    </style>
+</head>
+<body x-data="timer" x-init="initialize(); setInterval(() => countdown(), 1000);" class="h-screen overflow-hidden" :class="type">
+    <div class="timer h-screen flex flex-col" :style="`background-position: ${(time == intervals[position].time) ? '100% 100%': 100*(time - 1)/intervals[position].time + '% ' + 100*(time - 1)/intervals[position].time + '%'}; transition-duration: ${(time == intervals[position].time) ? '0.1s': '1s'};`">
+        <div @click="play = !play" class="grow cursor-pointer flex items-center justify-center">
+            <div class="tabular-nums leading-none" style="font-size: 30vw;">
+                <span x-text="('0' + Math.floor(time / 60)).slice(-2)"></span>:<span x-text="('0' + (time - Math.floor(time / 60) * 60)).slice(-2)"></span>
+            </div>
+        </div>
+        <div class="flex flex-row items-center justify-center font-semibold text-2xl p-10">
+            <div>
+                <button @click="previous()" class="cursor-pointer">&lsaquo;</button>
+            </div>
+            <div class="grow" x-text="text"></div>
+            <div>
+                <button @click="next()" class="cursor-pointer">&rsaquo;</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+
+
+
