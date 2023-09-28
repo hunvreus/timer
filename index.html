@@ -8,8 +8,6 @@
     <!-- <link rel="stylesheet" href="style.css"> -->
     
     <script>
-        let sound = new Audio('./bell.mp3');
-
         document.addEventListener('alpine:init', () => {
             Alpine.data('timer', () => ({
                 config: {
@@ -25,6 +23,7 @@
                 play: false,
                 type: '',
                 text: '',
+                sound: null,
 
                 initialize() {
                     this.intervals = [];
@@ -50,6 +49,12 @@
                         this.set(this.position);
                     }
                 },
+                toggle() {
+                    this.play = !this.play;
+                    if (!this.sound) {
+                        this.sound = new Audio('./bell.mp3'); 
+                    }
+                },
                 previous() {
                     console.log('Previous');
                     if (this.position > 0) {
@@ -70,7 +75,7 @@
                         else {
                             this.time--;
                             if (this.time == 0) {
-                                sound.play();
+                                this.sound.play();
                                 this.next();
                             }
                         }
@@ -128,7 +133,7 @@
 </head>
 <body x-data="timer" x-init="initialize(); setInterval(() => countdown(), 1000);" class="h-screen overflow-hidden" :class="type">
     <div class="timer h-screen flex flex-col" :style="`background-position: ${(time == intervals[position].time) ? '100% 100%': 100*(time - 1)/intervals[position].time + '% ' + 100*(time - 1)/intervals[position].time + '%'}; transition-duration: ${(time == intervals[position].time) ? '0.1s': '1s'};`">
-        <div @click="play = !play" class="grow cursor-pointer flex items-center justify-center">
+        <div @click="toggle()" class="grow cursor-pointer flex items-center justify-center">
             <div class="tabular-nums leading-none" style="font-size: 30vw;">
                 <span x-text="('0' + Math.floor(time / 60)).slice(-2)"></span>:<span x-text="('0' + (time - Math.floor(time / 60) * 60)).slice(-2)"></span>
             </div>
