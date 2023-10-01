@@ -2,17 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Timer</title>
-    <!-- <link rel="stylesheet" href="style.css"> -->
     
     <script>
+        function formatTime(time) {
+            return ('0' + Math.floor(time / 60)).slice(-2) + ':' + ('0' + (time - Math.floor(time / 60) * 60)).slice(-2);
+        }
+        function delay(time) {
+            return new Promise(resolve => setTimeout(resolve, time));
+        }
+
         document.addEventListener('alpine:init', () => {
             Alpine.data('timer', () => ({
                 config: {
-                    warmUp: 5,
-                    coolDown: 5,
+                    warmUp: 3,
+                    coolDown: 3,
                     highIntensity: 20,
                     lowIntensity: 10,
                     sets: 12
@@ -20,62 +27,75 @@
                 intervals: [],
                 position: 0,
                 time: 0,
+                total: 0,
                 play: false,
-                type: '',
+                id: '',
                 text: '',
                 sound: null,
 
                 initialize() {
                     this.intervals = [];
-                    if (this.config.coolDown) this.intervals.unshift({ time: this.config.coolDown, type: 'cool-down', text: 'Cool down'});
-                    for (let i = 0; i < this.config.sets; i++) {
-                        if (this.config.lowIntensity) this.intervals.unshift({ time: this.config.lowIntensity, type: 'low-intensity', text: 'Work' + ' (' + (this.config.sets - i) + '/' + this.config.sets + ')'});
-                        if (this.config.highIntensity) this.intervals.unshift({ time: this.config.highIntensity, type: 'high-intensity', text: 'Work' + ' (' + (this.config.sets - i) + '/' + this.config.sets + ')'});
+                    this.total = 0;
+                    if (this.config.coolDown) {
+                        this.total += this.config.coolDown;
+                        this.intervals.unshift({ time: this.config.coolDown, total: this.total, id: 'cool-down', text: 'Cool down'});
                     }
-                    if (this.config.warmUp) this.intervals.unshift({ time: this.config.warmUp, type: 'warm-up', text: 'Warm up'});
+                    for (let i = 0; i < this.config.sets; i++) {
+                        if (this.config.lowIntensity) {
+                            this.total += this.config.lowIntensity;
+                            this.intervals.unshift({ time: this.config.lowIntensity, total: this.total, id: 'low-intensity', text: 'Work' + ' (' + (this.config.sets - i) + '/' + this.config.sets + ')'});
+                        }
+                        if (this.config.highIntensity) {
+                            this.total += this.config.highIntensity;
+                            this.intervals.unshift({ time: this.config.highIntensity, total: this.total, id: 'high-intensity', text: 'Work' + ' (' + (this.config.sets - i) + '/' + this.config.sets + ')'});
+                        }
+                    }
+                    if (this.config.warmUp) {
+                        this.total += this.config.warmUp;
+                        this.intervals.unshift({ time: this.config.warmUp, total: this.total, id: 'warm-up', text: 'Warm up'});
+                    }
                     if (this.intervals.length) {
                         this.set(0);
                     }
                 },
                 set(position) {
                     this.time = this.intervals[position].time;
-                    this.type = this.intervals[position].type;
+                    this.id = this.intervals[position].id;
                     this.text = this.intervals[position].text;
                 },
                 next() {
-                    console.log('Next');
+                    if (!this.sound) this.sound = new Audio('./bell.mp3');
                     if (this.position < (this.intervals.length - 1)) {
+                        this.sound.play();
                         this.position++;
                         this.set(this.position);
                     }
                 },
                 toggle() {
+                    if (!this.sound) this.sound = new Audio('./bell.mp3');
                     this.play = !this.play;
-                    if (!this.sound) {
-                        this.sound = new Audio('./bell.mp3'); 
-                    }
                 },
                 previous() {
-                    console.log('Previous');
+                    if (!this.sound) this.sound = new Audio('./bell.mp3');
                     if (this.position > 0) {
                         this.position--;
                         this.set(this.position);
                     }
                 },
-                countdown() {
+                countdown(el) {
                     if (this.play) {
-                        // TODO: maybe move to a reset function? Should we stay there?
                         if ((this.time == 0) && (this.position == this.intervals.length - 1)) {
-                            // TODO: trigger message to inform we're done?
                             this.play = false;
                             this.position = 0;
-                            this.time = this.intervals[0].time;
-                            this.type = this.intervals[0].type;
+                            this.set(0);
                         }
                         else {
                             this.time--;
+                            // el.style.transitionDuration = '1s';
+                            // el.style.backgroundPosition = 100*(this.time - 1)/this.intervals[this.position].time + '% ' + 100*(this.time - 1)/this.intervals[this.position].time + '%';
                             if (this.time == 0) {
-                                this.sound.play();
+                                // el.style.transitionDuration = null;
+                                // el.style.backgroundPosition = '100% 100%';
                                 this.next();
                             }
                         }
@@ -97,22 +117,28 @@
                 extend: {
                     fontFamily: {
                         sans: ['"Manrope"']
+                    },
+                    height: {
+                        screen: ['100vh /* fallback for Opera, IE and etc. */', '100dvh'],
                     }
                 }
             }
         }
     </script>
     <style type="text/tailwindcss">
+        body,
+        html { @apply h-screen; }
+        
         body {
-            @apply bg-neutral-900 text-white text-center;
+            @apply bg-neutral-900 text-white text-center font-semibold;
         }
 
-        .warm-up {
+        .warm-up { 
             @apply bg-amber-500;
         }
 
         .high-intensity {
-            @apply bg-red-500;
+            @apply bg-pink-500;
         }
 
         .low-intensity {
@@ -120,31 +146,44 @@
         }
 
         .cool-down {
-            @apply bg-blue-500;
+            @apply bg-teal-500;
         }
 
         .timer {
-            background: linear-gradient(#171717, #171717 50%, transparent 50%, transparent);
-            background-size: 100% 200%;
+            background-image: linear-gradient(#171717, #171717 50%, transparent 50%, transparent);
             background-position: 100% 100%;
+            background-size: 100% 200%;
             transition: background linear 1s;
         }
     </style>
 </head>
-<body x-data="timer" x-init="initialize(); setInterval(() => countdown(), 1000);" class="h-screen overflow-hidden" :class="type">
-    <div class="timer h-screen flex flex-col" :style="`background-position: ${(time == intervals[position].time) ? '100% 100%': 100*(time - 1)/intervals[position].time + '% ' + 100*(time - 1)/intervals[position].time + '%'}; transition-duration: ${(time == intervals[position].time) ? '0.1s': '1s'};`">
-        <div @click="toggle()" class="grow cursor-pointer flex items-center justify-center">
-            <div class="tabular-nums leading-none" style="font-size: 30vw;">
-                <span x-text="('0' + Math.floor(time / 60)).slice(-2)"></span>:<span x-text="('0' + (time - Math.floor(time / 60) * 60)).slice(-2)"></span>
+<body x-data="timer" x-init="initialize(); el = $el; setInterval(() => countdown(el), 1000);" :class="id">
+    <div class="timer h-screen flex flex-col" :style="{ backgroundPosition: 100*(time - 1)/(intervals[position].time - 1) + '% ' + 100*(time - 1)/(intervals[position].time - 1) + '%'}">
+        <div class="grow flex flex-col items-center justify-center leading-none">
+            <div class="w-full mb-6">
+                <div x-text="text" class="mb-2" style="font-size: 6vw;"></div>
+                <div class="tabular-nums" style="font-size: 30vw;" x-text="formatTime(time)"></div>
+            </div>
+            <div class="flex w-full landscape:hidden">
+                <div class="w-1/2">
+                    <div class="mb-2" style="font-size: 4vw;">Elapsed</div>
+                    <div class="tabular-nums" style="font-size: 10vw;" x-text="formatTime(total - intervals[position].total + intervals[position].time - time)"></div>
+                </div>
+                <div class="w-1/2">
+                    <div class="mb-2" style="font-size: 4vw;">Remaining</div>
+                    <div class="tabular-nums" style="font-size: 10vw;" x-text="formatTime(intervals[position].total - intervals[position].time + time)"></div>
+                </div>
             </div>
         </div>
-        <div class="flex flex-row items-center justify-center font-semibold text-2xl p-10">
+        <div class="flex items-center justify-center m-10">
             <div>
-                <button @click="previous()" class="cursor-pointer">&lsaquo;</button>
+                <button @click="previous()" class="cursor-pointer px-6 py-3 font-light" style="font-size: 14vw;">&lsaquo;</button>
             </div>
-            <div class="grow" x-text="text"></div>
+            <div class="grow">
+                <button @click="toggle()" x-text="(total - intervals[position].total + intervals[position].time - time > 0) ? (play ? 'Pause' : 'Resume') : (play ? 'Pause' : 'Start')" class="cursor-pointer rounded-full border border-white" style="border-width: 0.8vw; font-size: 6vw; height: 40vw; width: 40vw;">Start</button>
+            </div>
             <div>
-                <button @click="next()" class="cursor-pointer">&rsaquo;</button>
+                <button @click="next()" class="cursor-pointer px-6 py-3 font-light" style="font-size: 14vw;">&rsaquo;</button>
             </div>
         </div>
     </div>
